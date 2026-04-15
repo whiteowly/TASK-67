@@ -1,0 +1,46 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: campusrec
+      POSTGRES_PASSWORD: campusrec
+      POSTGRES_DB: campusrec
+    # Database is internal to the Compose network — not exposed to host.
+    # Use `docker compose exec db psql -U campusrec` for ad-hoc access.
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U campusrec"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      DATABASE_URL: postgres://campusrec:campusrec@db:5432/campusrec?sslmode=disable
+      SESSION_SECRET: dev-bootstrap-secret-do-not-use-in-production-32ch
+      GIN_MODE: release
+      SERVER_HOST: 0.0.0.0
+      SERVER_PORT: "8080"
+      FACILITY_TIMEZONE: Asia/Shanghai
+      FACILITY_NAME: CampusRec Center
+      PAYMENT_MERCHANT_KEY: dev-merchant-key-do-not-use-in-production
+    depends_on:
+      db:
+        condition: service_healthy
+    command: >
+      sh -c "
+        for i in 1 2 3 4 5; do
+          /app/campusrec -migrate up && break || sleep 2;
+        done &&
+        /app/campusrec -seed &&
+        /app/campusrec
+      "
+
+volumes:
+  pgdata:

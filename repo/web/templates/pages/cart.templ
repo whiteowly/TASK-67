@@ -1,0 +1,74 @@
+package pages
+
+import (
+	"fmt"
+	"github.com/campusrec/campusrec/internal/model"
+	"github.com/campusrec/campusrec/web/templates/components"
+	"github.com/campusrec/campusrec/web/templates/layout"
+)
+
+func cartTotal(items []model.CartItem) int64 {
+	var total int64
+	for _, item := range items {
+		total += item.PriceSnapshot * int64(item.Quantity)
+	}
+	return total
+}
+
+func cartCurrency(items []model.CartItem) string {
+	if len(items) > 0 {
+		return items[0].Currency
+	}
+	return "CNY"
+}
+
+templ CartPage(pctx components.PageContext, cart *model.Cart, items []model.CartItem) {
+	@layout.Base(pctx, "My Cart") {
+		<div class="page-header">
+			<h1>My Cart</h1>
+			<a href="/catalog" class="btn btn-secondary">Continue Shopping</a>
+		</div>
+		if len(items) == 0 {
+			<p class="empty-state">Your cart is empty. Browse the <a href="/catalog">catalog</a> to add items.</p>
+		} else {
+			<table class="data-table">
+				<thead>
+					<tr>
+						<th>Item</th>
+						<th>Type</th>
+						<th>Qty</th>
+						<th>Price</th>
+						<th>Line Total</th>
+						<th>Actions</th>
+					</tr>
+				</thead>
+				<tbody>
+					for _, item := range items {
+						<tr>
+							<td class="monospace">{ item.ItemID.String()[:8] }...</td>
+							<td><span class="badge badge-info">{ item.ItemType }</span></td>
+							<td>{ fmt.Sprint(item.Quantity) }</td>
+							<td>{ formatPrice(item.PriceSnapshot, item.Currency) }</td>
+							<td>{ formatPrice(item.PriceSnapshot * int64(item.Quantity), item.Currency) }</td>
+							<td>
+								<form method="POST" action={ templ.SafeURL(fmt.Sprintf("/my/cart/remove/%s", item.ID)) } class="inline-form">
+									<button type="submit" class="btn btn-sm btn-danger">Remove</button>
+								</form>
+							</td>
+						</tr>
+					}
+				</tbody>
+				<tfoot>
+					<tr>
+						<td colspan="4" style="text-align:right"><strong>Total:</strong></td>
+						<td><strong>{ formatPrice(cartTotal(items), cartCurrency(items)) }</strong></td>
+						<td></td>
+					</tr>
+				</tfoot>
+			</table>
+			<div class="detail-actions" style="margin-top:1.5rem; justify-content:flex-end">
+				<a href="/my/checkout" class="btn btn-primary">Proceed to Checkout</a>
+			</div>
+		}
+	}
+}

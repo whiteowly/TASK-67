@@ -1,0 +1,64 @@
+package admin
+
+import (
+	"fmt"
+	"github.com/campusrec/campusrec/internal/model"
+	"github.com/campusrec/campusrec/web/templates/components"
+	"github.com/campusrec/campusrec/web/templates/layout"
+)
+
+templ AuditLogsPage(pctx components.PageContext, logs []model.AuditLog, total int, page int, perPage int) {
+	@layout.Base(pctx, "Audit Logs") {
+		<div class="page-header">
+			<h1>Audit Logs</h1>
+			<a href="/admin" class="btn btn-secondary">Back to Admin</a>
+		</div>
+		<form method="GET" action="/admin/audit-logs" class="search-bar">
+			<input type="text" name="resource" placeholder="Resource" value=""/>
+			<input type="text" name="action" placeholder="Action" value=""/>
+			<button type="submit" class="btn btn-primary">Filter</button>
+		</form>
+		<p class="result-count">{ fmt.Sprintf("Showing page %d (%d total entries)", page, total) }</p>
+		<table class="data-table">
+			<thead>
+				<tr>
+					<th>ID</th>
+					<th>Actor</th>
+					<th>Action</th>
+					<th>Resource</th>
+					<th>Resource ID</th>
+					<th>Timestamp</th>
+				</tr>
+			</thead>
+			<tbody>
+				for _, l := range logs {
+					<tr>
+						<td>{ fmt.Sprint(l.ID) }</td>
+						<td>
+							{ l.ActorType }
+							if l.ActorID != nil {
+								<br/><small class="monospace">{ l.ActorID.String() }</small>
+							}
+						</td>
+						<td>{ l.Action }</td>
+						<td>{ l.Resource }</td>
+						<td class="monospace">
+							if l.ResourceID != nil {
+								{ *l.ResourceID }
+							}
+						</td>
+						<td>{ l.CreatedAt.Format("2006-01-02 15:04:05") }</td>
+					</tr>
+				}
+			</tbody>
+		</table>
+		<div class="pagination">
+			if page > 1 {
+				<a href={ templ.SafeURL(fmt.Sprintf("/admin/audit-logs?page=%d&per_page=%d", page-1, perPage)) } class="btn btn-sm">Previous</a>
+			}
+			if len(logs) == perPage {
+				<a href={ templ.SafeURL(fmt.Sprintf("/admin/audit-logs?page=%d&per_page=%d", page+1, perPage)) } class="btn btn-sm">Next</a>
+			}
+		</div>
+	}
+}

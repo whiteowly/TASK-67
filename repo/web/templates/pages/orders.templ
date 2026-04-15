@@ -1,0 +1,151 @@
+package pages
+
+import (
+	"fmt"
+	"github.com/campusrec/campusrec/internal/model"
+	"github.com/campusrec/campusrec/web/templates/components"
+	"github.com/campusrec/campusrec/web/templates/layout"
+)
+
+func orderStatusClass(status string) string {
+	switch status {
+	case "paid", "delivered":
+		return "badge-success"
+	case "awaiting_payment", "fulfillment_pending", "shipped":
+		return "badge-warning"
+	case "auto_closed", "manually_canceled":
+		return "badge-danger"
+	default:
+		return "badge-info"
+	}
+}
+
+templ OrderList(pctx components.PageContext, orders []model.Order) {
+	@layout.Base(pctx, "My Orders") {
+		<h1>My Orders</h1>
+		if len(orders) == 0 {
+			<p class="empty-state">No orders yet.</p>
+		} else {
+			<table class="data-table">
+				<thead>
+					<tr>
+						<th>Order #</th>
+						<th>Status</th>
+						<th>Total</th>
+						<th>Date</th>
+						<th>Actions</th>
+					</tr>
+				</thead>
+				<tbody>
+					for _, o := range orders {
+						<tr>
+							<td><a href={ templ.SafeURL(fmt.Sprintf("/my/orders/%s", o.ID)) }>{ o.OrderNumber }</a></td>
+							<td><span class={ "badge", orderStatusClass(o.Status) }>{ o.Status }</span></td>
+							<td>{ formatPrice(o.Total, o.Currency) }</td>
+							<td>{ o.CreatedAt.Format("Jan 02, 2006 15:04") }</td>
+							<td>
+								if o.Status == "awaiting_payment" {
+									<a href={ templ.SafeURL(fmt.Sprintf("/my/orders/%s", o.ID)) } class="btn btn-sm btn-primary">Pay</a>
+								}
+							</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		}
+	}
+}
+
+// countdownScript renders the payment countdown JS. It reads the expiry from the
+// data-expires-at attribute on #payment-section, counts down every second, and
+// flips to an expired guidance message when time runs out.
+templ countdownScript() {
+	<script type="text/javascript">
+		(function() {
+			var el = document.getElementById("payment-section");
+			if (!el) return;
+			var expiresAt = new Date(el.getAttribute("data-expires-at")).getTime();
+			var timerEl = document.getElementById("countdown-timer");
+			var countdownEl = document.getElementById("countdown-container");
+			var expiredEl = document.getElementById("expired-container");
+			var qrEl = document.getElementById("qr-code");
+			function tick() {
+				var remaining = expiresAt - Date.now();
+				if (remaining <= 0) {
+					countdownEl.style.display = "none";
+					expiredEl.style.display = "block";
+					if (qrEl) qrEl.style.display = "none";
+					return;
+				}
+				var m = Math.floor(remaining / 60000);
+				var s = Math.floor((remaining % 60000) / 1000);
+				timerEl.textContent = (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s;
+				setTimeout(tick, 1000);
+			}
+			tick();
+		})();
+	</script>
+}
+
+templ OrderDetail(pctx components.PageContext, order *model.Order, items []model.OrderItem, payReq *model.PaymentRequest) {
+	@layout.Base(pctx, "Order "+order.OrderNumber) {
+		<div class="detail-page">
+			<a href="/my/orders" class="back-link">Back to Orders</a>
+			<h1>Order { order.OrderNumber }</h1>
+			<div class="detail-badges">
+				<span class={ "badge", orderStatusClass(order.Status) }>{ order.Status }</span>
+			</div>
+			<div class="detail-info">
+				<p><strong>Total:</strong> { formatPrice(order.Total, order.Currency) }</p>
+				<p><strong>Created:</strong> { order.CreatedAt.Format("Jan 02, 2006 15:04") }</p>
+			</div>
+			<h3>Items</h3>
+			<table class="data-table">
+				<thead><tr><th>Item</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead>
+				<tbody>
+					for _, item := range items {
+						<tr>
+							<td>{ item.ItemName }</td>
+							<td>{ fmt.Sprint(item.Quantity) }</td>
+							<td>{ formatPrice(item.UnitPrice, item.Currency) }</td>
+							<td>{ formatPrice(item.LineTotal, item.Currency) }</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+			if order.Status == "awaiting_payment" && payReq == nil {
+				<div class="payment-section">
+					<h3>Payment</h3>
+					<p>No active payment request. Create one to proceed.</p>
+					<form method="POST" action={ templ.SafeURL(fmt.Sprintf("/my/orders/%s/pay", order.ID)) }>
+						<button type="submit" class="btn btn-primary">Request Payment</button>
+					</form>
+				</div>
+			}
+			if order.Status == "awaiting_payment" && payReq != nil {
+				<div class="payment-section" id="payment-section" data-expires-at={ payReq.ExpiresAt.Format("2006-01-02T15:04:05Z") }>
+					<h3>Payment</h3>
+					<div id="countdown-container">
+						<p>Scan to pay. Time remaining: <strong id="countdown-timer">--:--</strong></p>
+					</div>
+					<div id="expired-container" style="display:none">
+						<p class="badge badge-danger">Payment request expired</p>
+						<p>Please <a href={ templ.SafeURL(fmt.Sprintf("/my/orders/%s", order.ID)) }>refresh this page</a> or request a new payment to continue.</p>
+					</div>
+					if payReq.QRPayload != nil {
+						<div class="qr-code" id="qr-code">{ *payReq.QRPayload }</div>
+					}
+					<p class="payment-expiry-info"><strong>Expires at:</strong> { payReq.ExpiresAt.Format("Jan 02, 2006 15:04:05") }</p>
+				</div>
+				@countdownScript()
+			}
+			if order.Status == "auto_closed" {
+				<div class="payment-section">
+					<h3>Order Auto-Closed</h3>
+					<p>This order was automatically closed because the payment request expired.</p>
+					<p>To purchase these items again, please browse the <a href="/catalog">catalog</a> and place a new order.</p>
+				</div>
+			}
+		</div>
+	}
+}

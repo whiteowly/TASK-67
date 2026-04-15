@@ -1,0 +1,105 @@
+package admin
+
+import (
+	"fmt"
+	"github.com/campusrec/campusrec/internal/model"
+	"github.com/campusrec/campusrec/web/templates/components"
+	"github.com/campusrec/campusrec/web/templates/layout"
+)
+
+templ KPIDashboard(pctx components.PageContext, kpis map[string]interface{}) {
+	@layout.Base(pctx, "KPI Dashboard") {
+		<div class="page-header">
+			<h1>KPI Dashboard</h1>
+			<a href="/admin" class="btn btn-secondary">Back to Admin</a>
+		</div>
+		<div class="features-grid">
+			for key, val := range kpis {
+				<div class="feature-card">
+					<h3>{ key }</h3>
+					<p class="kpi-value">{ fmt.Sprintf("%v", val) }</p>
+				</div>
+			}
+		</div>
+	}
+}
+
+templ BackupsPage(pctx components.PageContext, backups []model.BackupRun) {
+	@layout.Base(pctx, "Backups") {
+		<div class="page-header">
+			<h1>Backup Management</h1>
+			<div>
+				<form method="POST" action="/admin/backups/run" class="inline-form">
+					<button type="submit" class="btn btn-primary">Run Backup Now</button>
+				</form>
+				<a href="/admin" class="btn btn-secondary">Back</a>
+			</div>
+		</div>
+		<table class="data-table">
+			<thead><tr><th>ID</th><th>Status</th><th>Size</th><th>Started</th><th>Completed</th></tr></thead>
+			<tbody>
+				for _, b := range backups {
+					<tr>
+						<td class="monospace">{ b.ID.String()[:8] }</td>
+						<td><span class="badge">{ b.Status }</span></td>
+						<td>
+							if b.SizeBytes != nil {
+								{ fmt.Sprintf("%.1f MB", float64(*b.SizeBytes)/1024/1024) }
+							}
+						</td>
+						<td>{ b.StartedAt.Format("2006-01-02 15:04") }</td>
+						<td>
+							if b.CompletedAt != nil {
+								{ b.CompletedAt.Format("2006-01-02 15:04") }
+							}
+						</td>
+					</tr>
+				}
+			</tbody>
+		</table>
+	}
+}
+
+templ JobsPage(pctx components.PageContext, jobs []model.Job, counts map[string]int) {
+	@layout.Base(pctx, "Job Queue") {
+		<div class="page-header">
+			<h1>Job Queue</h1>
+			<a href="/admin" class="btn btn-secondary">Back</a>
+		</div>
+		<div class="features-grid">
+			for status, count := range counts {
+				<div class="feature-card">
+					<h3>{ status }</h3>
+					<p class="kpi-value">{ fmt.Sprint(count) }</p>
+				</div>
+			}
+		</div>
+		<h2>Recent Jobs</h2>
+		<table class="data-table">
+			<thead><tr><th>ID</th><th>Type</th><th>Status</th><th>Retries</th><th>Created</th><th>Error</th></tr></thead>
+			<tbody>
+				for _, j := range jobs {
+					<tr>
+						<td class="monospace">{ j.ID.String()[:8] }</td>
+						<td>{ j.JobType }</td>
+						<td><span class="badge">{ j.Status }</span></td>
+						<td>{ fmt.Sprintf("%d/%d", j.RetryCount, j.MaxRetries) }</td>
+						<td>{ j.CreatedAt.Format("2006-01-02 15:04") }</td>
+						<td>
+							if j.LastError != nil {
+								{ truncateStr(*j.LastError, 50) }
+							}
+						</td>
+					</tr>
+				}
+			</tbody>
+		</table>
+	}
+}
+
+func truncateStr(s string, n int) string {
+	if len(s) <= n {
+		return s
+	}
+	return s[:n] + "..."
+}

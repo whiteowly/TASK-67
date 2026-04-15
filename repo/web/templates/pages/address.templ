@@ -1,0 +1,167 @@
+package pages
+
+import (
+	"fmt"
+	"github.com/campusrec/campusrec/internal/model"
+	"github.com/campusrec/campusrec/web/templates/components"
+	"github.com/campusrec/campusrec/web/templates/layout"
+)
+
+templ AddressList(pctx components.PageContext, addrs []model.DeliveryAddress) {
+	@layout.Base(pctx, "My Addresses") {
+		<div class="page-header">
+			<h1>My Addresses</h1>
+			<a href="/my/addresses/new" class="btn btn-primary">Add Address</a>
+		</div>
+		if len(addrs) == 0 {
+			<p class="empty-state">No addresses yet. Add one to get started.</p>
+		} else {
+			<div class="card-grid">
+				for _, a := range addrs {
+					<div class="card">
+						<div class="card-header">
+							<h3>
+								{ a.RecipientName }
+								if a.IsDefault {
+									<span class="badge badge-success">Default</span>
+								}
+							</h3>
+						</div>
+						if a.Label != "" {
+							<p class="card-label">{ a.Label }</p>
+						}
+						<p>{ a.Line1 }</p>
+						if a.Line2 != "" {
+							<p>{ a.Line2 }</p>
+						}
+						<p>{ a.City }{ stateComma(a.State) } { a.PostalCode }</p>
+						<p>Phone: { a.Phone }</p>
+						<div class="card-actions">
+							<a href={ templ.SafeURL(fmt.Sprintf("/my/addresses/%s/edit", a.ID)) } class="btn btn-sm">Edit</a>
+							<form method="POST" action={ templ.SafeURL(fmt.Sprintf("/my/addresses/%s/delete", a.ID)) }
+								class="inline-form"
+								onsubmit="return confirm('Delete this address?')">
+								<button type="submit" class="btn btn-sm btn-danger">Delete</button>
+							</form>
+						</div>
+					</div>
+				}
+			</div>
+		}
+	}
+}
+
+func stateComma(state string) string {
+	if state != "" {
+		return ", " + state
+	}
+	return ""
+}
+
+func addrValue(addr *model.DeliveryAddress, field string) string {
+	if addr == nil {
+		return ""
+	}
+	switch field {
+	case "label":
+		return addr.Label
+	case "recipient_name":
+		return addr.RecipientName
+	case "phone":
+		return addr.Phone
+	case "line1":
+		return addr.Line1
+	case "line2":
+		return addr.Line2
+	case "city":
+		return addr.City
+	case "state":
+		return addr.State
+	case "postal_code":
+		return addr.PostalCode
+	case "country_code":
+		return addr.CountryCode
+	}
+	return ""
+}
+
+func isAddrDefault(addr *model.DeliveryAddress) bool {
+	return addr != nil && addr.IsDefault
+}
+
+templ AddressForm(pctx components.PageContext, addr *model.DeliveryAddress, errMsg string) {
+	@layout.Base(pctx, "Address") {
+		<div class="form-container">
+			if addr != nil {
+				<h2>Edit Address</h2>
+			} else {
+				<h2>New Address</h2>
+			}
+			if errMsg != "" {
+				<div class="alert alert-error">{ errMsg }</div>
+			}
+			if addr != nil {
+				<form method="POST" action={ templ.SafeURL(fmt.Sprintf("/my/addresses/%s", addr.ID)) } class="form">
+					@addressFields(addr)
+					<button type="submit" class="btn btn-primary">Save Changes</button>
+					<a href="/my/addresses" class="btn btn-secondary">Cancel</a>
+				</form>
+			} else {
+				<form method="POST" action="/my/addresses" class="form">
+					@addressFields(addr)
+					<button type="submit" class="btn btn-primary">Create Address</button>
+					<a href="/my/addresses" class="btn btn-secondary">Cancel</a>
+				</form>
+			}
+		</div>
+	}
+}
+
+templ addressFields(addr *model.DeliveryAddress) {
+	<div class="form-group">
+		<label for="label">Label (optional)</label>
+		<input type="text" id="label" name="label" value={ addrValue(addr, "label") } placeholder="Home, Office, etc."/>
+	</div>
+	<div class="form-group">
+		<label for="recipient_name">Recipient Name *</label>
+		<input type="text" id="recipient_name" name="recipient_name" value={ addrValue(addr, "recipient_name") } required/>
+	</div>
+	<div class="form-group">
+		<label for="phone">Phone *</label>
+		<input type="text" id="phone" name="phone" value={ addrValue(addr, "phone") } required/>
+	</div>
+	<div class="form-group">
+		<label for="line1">Address Line 1 *</label>
+		<input type="text" id="line1" name="line1" value={ addrValue(addr, "line1") } required/>
+	</div>
+	<div class="form-group">
+		<label for="line2">Address Line 2</label>
+		<input type="text" id="line2" name="line2" value={ addrValue(addr, "line2") }/>
+	</div>
+	<div class="form-row">
+		<div class="form-group">
+			<label for="city">City *</label>
+			<input type="text" id="city" name="city" value={ addrValue(addr, "city") } required/>
+		</div>
+		<div class="form-group">
+			<label for="state">State/Province</label>
+			<input type="text" id="state" name="state" value={ addrValue(addr, "state") }/>
+		</div>
+	</div>
+	<div class="form-row">
+		<div class="form-group">
+			<label for="postal_code">Postal Code</label>
+			<input type="text" id="postal_code" name="postal_code" value={ addrValue(addr, "postal_code") }/>
+		</div>
+		<div class="form-group">
+			<label for="country_code">Country Code</label>
+			<input type="text" id="country_code" name="country_code" value={ addrValue(addr, "country_code") } placeholder="CN" maxlength="2"/>
+		</div>
+	</div>
+	<div class="form-group">
+		<label class="checkbox-label">
+			<input type="checkbox" name="is_default" checked?={ isAddrDefault(addr) }/>
+			Set as default address
+		</label>
+	</div>
+}

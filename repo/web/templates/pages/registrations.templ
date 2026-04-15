@@ -1,0 +1,67 @@
+package pages
+
+import (
+	"fmt"
+	"github.com/campusrec/campusrec/internal/model"
+	"github.com/campusrec/campusrec/web/templates/components"
+	"github.com/campusrec/campusrec/web/templates/layout"
+)
+
+func regStatusBadgeClass(status string) string {
+	switch status {
+	case "registered", "checked_in":
+		return "badge-success"
+	case "pending_approval", "waitlisted", "temporarily_away":
+		return "badge-warning"
+	case "canceled", "rejected", "no_show_canceled", "released":
+		return "badge-danger"
+	case "completed":
+		return "badge-info"
+	default:
+		return ""
+	}
+}
+
+func sessionTitle(sessionID string, titles map[string]string) string {
+	if t, ok := titles[sessionID]; ok && t != "" {
+		return t
+	}
+	return sessionID[:8] + "..."
+}
+
+templ RegistrationList(pctx components.PageContext, regs []model.SessionRegistration, sessionTitles map[string]string) {
+	@layout.Base(pctx, "My Registrations") {
+		<h1>My Registrations</h1>
+		if len(regs) == 0 {
+			<p class="empty-state">No registrations yet. <a href="/catalog">Browse sessions</a> to register.</p>
+		} else {
+			<table class="data-table">
+				<thead>
+					<tr>
+						<th>Session</th>
+						<th>Status</th>
+						<th>Registered</th>
+						<th>Actions</th>
+					</tr>
+				</thead>
+				<tbody>
+					for _, r := range regs {
+						<tr>
+							<td>{ sessionTitle(r.SessionID.String(), sessionTitles) }</td>
+							<td><span class={ "badge", regStatusBadgeClass(r.Status) }>{ r.Status }</span></td>
+							<td>{ r.RegisteredAt.Format("Jan 02, 2006 15:04") }</td>
+							<td>
+								if r.Status == "registered" || r.Status == "pending_approval" || r.Status == "waitlisted" {
+									<form method="POST" action={ templ.SafeURL(fmt.Sprintf("/my/registrations/%s/cancel", r.ID)) }
+										class="inline-form" onsubmit="return confirm('Cancel this registration?')">
+										<button type="submit" class="btn btn-sm btn-danger">Cancel</button>
+									</form>
+								}
+							</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		}
+	}
+}

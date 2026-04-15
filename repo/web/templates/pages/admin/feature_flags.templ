@@ -1,0 +1,52 @@
+package admin
+
+import (
+	"fmt"
+	"github.com/campusrec/campusrec/internal/model"
+	"github.com/campusrec/campusrec/web/templates/components"
+	"github.com/campusrec/campusrec/web/templates/layout"
+)
+
+templ FeatureFlagsPage(pctx components.PageContext, flags []model.FeatureFlag) {
+	@layout.Base(pctx, "Feature Flags") {
+		<div class="page-header">
+			<h1>Feature Flags</h1>
+			<a href="/admin" class="btn btn-secondary">Back to Admin</a>
+		</div>
+		if len(flags) == 0 {
+			<p class="empty-state">No feature flags configured. Use the API to create flags.</p>
+		} else {
+			<table class="data-table">
+				<thead>
+					<tr>
+						<th>Key</th>
+						<th>Enabled</th>
+						<th>Cohort %</th>
+						<th>Target Roles</th>
+						<th>Description</th>
+						<th>Version</th>
+					</tr>
+				</thead>
+				<tbody>
+					for _, f := range flags {
+						<tr>
+							<td class="monospace">{ f.Key }</td>
+							<td>
+								if f.Enabled {
+									<span class="badge badge-success">ON</span>
+								} else {
+									<span class="badge badge-danger">OFF</span>
+								}
+							</td>
+							<td>{ fmt.Sprintf("%d%%", f.CohortPercent) }</td>
+							<td>{ fmt.Sprintf("%v", f.TargetRoles) }</td>
+							<td>{ f.Description }</td>
+							<td>{ fmt.Sprint(f.Version) }</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		}
+		<p class="help-text">Use the API (PATCH /api/v1/admin/feature-flags/:key) to update flags.</p>
+	}
+}

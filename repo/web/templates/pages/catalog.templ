@@ -1,0 +1,222 @@
+package pages
+
+import (
+	"fmt"
+	"github.com/campusrec/campusrec/internal/model"
+	"github.com/campusrec/campusrec/web/templates/components"
+	"github.com/campusrec/campusrec/web/templates/layout"
+)
+
+type CatalogData struct {
+	Tab               string
+	Sessions          []model.SessionWithAvailability
+	Products          []model.ProductWithStock
+	SessionTotal      int
+	ProductTotal      int
+	SessionCategories []string
+	ProductCategories []string
+	Query             string
+	Category          string
+	Page              int
+	PerPage           int
+}
+
+func formatPrice(minorUnits int64, currency string) string {
+	major := float64(minorUnits) / 100.0
+	return fmt.Sprintf("%s %.2f", currency, major)
+}
+
+func totalPages(total, perPage int) int {
+	if perPage <= 0 {
+		return 1
+	}
+	p := total / perPage
+	if total%perPage > 0 {
+		p++
+	}
+	if p < 1 {
+		return 1
+	}
+	return p
+}
+
+templ CatalogList(pctx components.PageContext, data CatalogData) {
+	@layout.Base(pctx, "Catalog") {
+		<h1>Catalog</h1>
+		<div class="catalog-tabs">
+			<a href={ templ.SafeURL(fmt.Sprintf("/catalog?tab=sessions&q=%s", data.Query)) }
+				class={ "tab", templ.KV("active", data.Tab == "sessions") }>
+				Sessions ({ fmt.Sprint(data.SessionTotal) })
+			</a>
+			<a href={ templ.SafeURL(fmt.Sprintf("/catalog?tab=products&q=%s", data.Query)) }
+				class={ "tab", templ.KV("active", data.Tab == "products") }>
+				Products ({ fmt.Sprint(data.ProductTotal) })
+			</a>
+		</div>
+
+		<form method="GET" action="/catalog" class="search-bar">
+			<input type="hidden" name="tab" value={ data.Tab }/>
+			<input type="text" name="q" value={ data.Query } placeholder="Search..."/>
+			<select name="category">
+				<option value="">All Categories</option>
+				if data.Tab == "sessions" {
+					for _, cat := range data.SessionCategories {
+						<option value={ cat } selected?={ cat == data.Category }>{ cat }</option>
+					}
+				} else {
+					for _, cat := range data.ProductCategories {
+						<option value={ cat } selected?={ cat == data.Category }>{ cat }</option>
+					}
+				}
+			</select>
+			<button type="submit" class="btn btn-primary">Search</button>
+		</form>
+
+		if data.Tab == "sessions" {
+			<div class="card-grid">
+				if len(data.Sessions) == 0 {
+					<p class="empty-state">No sessions found.</p>
+				}
+				for _, s := range data.Sessions {
+					<div class="card">
+						<div class="card-header">
+							<h3><a href={ templ.SafeURL(fmt.Sprintf("/catalog/sessions/%s", s.ID)) }>{ s.Title }</a></h3>
+							<span class={ "badge", availabilityClass(s.AvailableSeats) }>
+								{ fmt.Sprintf("%d/%d seats", s.AvailableSeats, s.TotalSeats) }
+							</span>
+						</div>
+						<p class="card-desc">{ s.ShortDescription }</p>
+						<div class="card-meta">
+							if s.InstructorName != nil {
+								<span>Instructor: { *s.InstructorName }</span>
+							}
+							if s.Location != nil {
+								<span>Location: { *s.Location }</span>
+							}
+							<span>Price: { formatPrice(s.PriceMinorUnits, s.Currency) }</span>
+						</div>
+					</div>
+				}
+			</div>
+		} else {
+			<div class="card-grid">
+				if len(data.Products) == 0 {
+					<p class="empty-state">No products found.</p>
+				}
+				for _, p := range data.Products {
+					<div class="card">
+						<div class="card-header">
+							<h3><a href={ templ.SafeURL(fmt.Sprintf("/catalog/products/%s", p.ID)) }>{ p.Name }</a></h3>
+							<span class={ "badge", templ.KV("badge-success", p.StockQty > 0), templ.KV("badge-danger", p.StockQty == 0) }>
+								if p.StockQty > 0 {
+									In Stock
+								} else {
+									Out of Stock
+								}
+							</span>
+						</div>
+						<p class="card-desc">{ p.ShortDescription }</p>
+						<div class="card-meta">
+							<span>Price: { formatPrice(p.PriceMinorUnits, p.Currency) }</span>
+							if p.IsShippable {
+								<span>Shippable</span>
+							}
+						</div>
+					</div>
+				}
+			</div>
+		}
+	}
+}
+
+func availabilityClass(available int) string {
+	if available == 0 {
+		return "badge-danger"
+	}
+	if available <= 5 {
+		return "badge-warning"
+	}
+	return "badge-success"
+}
+
+templ SessionDetail(pctx components.PageContext, s *model.SessionWithAvailability) {
+	@layout.Base(pctx, s.Title) {
+		<div class="detail-page">
+			<a href="/catalog?tab=sessions" class="back-link">Back to Catalog</a>
+			<h1>{ s.Title }</h1>
+			<div class="detail-badges">
+				<span class={ "badge", availabilityClass(s.AvailableSeats) }>
+					{ fmt.Sprintf("%d/%d seats available", s.AvailableSeats, s.TotalSeats) }
+				</span>
+				if s.RequiresApproval {
+					<span class="badge badge-info">Requires Approval</span>
+				}
+				if s.AllowsWaitlist {
+					<span class="badge badge-info">Waitlist Available</span>
+				}
+			</div>
+			<div class="detail-info">
+				<p><strong>Description:</strong> { s.Description }</p>
+				if s.InstructorName != nil {
+					<p><strong>Instructor:</strong> { *s.InstructorName }</p>
+				}
+				if s.Location != nil {
+					<p><strong>Location:</strong> { *s.Location }</p>
+				}
+				if s.Category != nil {
+					<p><strong>Category:</strong> { *s.Category }</p>
+				}
+				<p><strong>Price:</strong> { formatPrice(s.PriceMinorUnits, s.Currency) }</p>
+				<p><strong>Start:</strong> { s.StartAt.Format("Jan 02, 2006 15:04") }</p>
+				<p><strong>End:</strong> { s.EndAt.Format("Jan 02, 2006 15:04") }</p>
+			</div>
+		</div>
+	}
+}
+
+templ ProductDetail(pctx components.PageContext, p *model.ProductWithStock) {
+	@layout.Base(pctx, p.Name) {
+		<div class="detail-page">
+			<a href="/catalog?tab=products" class="back-link">Back to Catalog</a>
+			<h1>{ p.Name }</h1>
+			<div class="detail-badges">
+				<span class={ "badge", templ.KV("badge-success", p.StockQty > 0), templ.KV("badge-danger", p.StockQty == 0) }>
+					if p.StockQty > 0 {
+						In Stock
+					} else {
+						Out of Stock
+					}
+				</span>
+				if p.IsShippable {
+					<span class="badge badge-info">Shippable</span>
+				}
+			</div>
+			<div class="detail-info">
+				<p><strong>Description:</strong> { p.Description }</p>
+				if p.Category != nil {
+					<p><strong>Category:</strong> { *p.Category }</p>
+				}
+				if p.SKU != nil {
+					<p><strong>SKU:</strong> { *p.SKU }</p>
+				}
+				<p><strong>Price:</strong> { formatPrice(p.PriceMinorUnits, p.Currency) }</p>
+			</div>
+			if pctx.User != nil && p.StockQty > 0 {
+				<div class="detail-actions">
+					<form method="POST" action="/my/cart/add" style="display:inline">
+						<input type="hidden" name="item_type" value="product"/>
+						<input type="hidden" name="item_id" value={ p.ID.String() }/>
+						<input type="hidden" name="redirect" value={ fmt.Sprintf("/catalog/products/%s", p.ID) }/>
+						<button type="submit" class="btn btn-secondary">Add to Cart</button>
+					</form>
+					<form method="POST" action="/my/buy-now" style="display:inline">
+						<input type="hidden" name="item_type" value="product"/>
+						<input type="hidden" name="item_id" value={ p.ID.String() }/>
+						<input type="hidden" name="redirect" value={ fmt.Sprintf("/catalog/products/%s", p.ID) }/>
+						<button type="submit" class="btn btn-primary">Buy Now</button>
+					</form>
+				</div>
+			}
+		</div>
+	}
+}

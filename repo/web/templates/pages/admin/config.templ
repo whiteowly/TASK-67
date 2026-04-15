@@ -1,0 +1,40 @@
+package admin
+
+import (
+	"fmt"
+	"github.com/campusrec/campusrec/internal/model"
+	"github.com/campusrec/campusrec/web/templates/components"
+	"github.com/campusrec/campusrec/web/templates/layout"
+)
+
+templ ConfigPage(pctx components.PageContext, configs []model.SystemConfig) {
+	@layout.Base(pctx, "System Configuration") {
+		<div class="page-header">
+			<h1>System Configuration</h1>
+			<a href="/admin" class="btn btn-secondary">Back to Admin</a>
+		</div>
+		<table class="data-table">
+			<thead>
+				<tr>
+					<th>Key</th>
+					<th>Value</th>
+					<th>Type</th>
+					<th>Description</th>
+					<th>Version</th>
+				</tr>
+			</thead>
+			<tbody>
+				for _, c := range configs {
+					<tr>
+						<td class="monospace">{ c.Key }</td>
+						<td>{ c.Value }</td>
+						<td>{ c.ValueType }</td>
+						<td>{ c.Description }</td>
+						<td>{ fmt.Sprint(c.Version) }</td>
+					</tr>
+				}
+			</tbody>
+		</table>
+		<p class="help-text">Use the API (PATCH /api/v1/admin/config/:key) to update configuration values.</p>
+	}
+}

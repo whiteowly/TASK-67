@@ -1,0 +1,35 @@
+package pages
+
+import (
+	"github.com/campusrec/campusrec/web/templates/components"
+	"github.com/campusrec/campusrec/web/templates/layout"
+)
+
+templ Home(pctx components.PageContext) {
+	@layout.Base(pctx, "Home") {
+		<div class="hero">
+			<h1>Welcome to { pctx.FacilityName }</h1>
+			<p>Browse sessions, register for activities, and manage your wellness journey.</p>
+			<div class="hero-actions">
+				<a href="/catalog" class="btn btn-primary">Browse Catalog</a>
+				if !pctx.IsLoggedIn() {
+					<a href="/register" class="btn btn-secondary">Create Account</a>
+				}
+			</div>
+		</div>
+		<div class="features-grid">
+			<div class="feature-card">
+				<h3>Sessions</h3>
+				<p>Browse and register for yoga, fitness, aquatics, and more.</p>
+			</div>
+			<div class="feature-card">
+				<h3>Products</h3>
+				<p>Shop equipment, merchandise, and accessories.</p>
+			</div>
+			<div class="feature-card">
+				<h3>Community</h3>
+				<p>Connect with instructors and fellow members.</p>
+			</div>
+		</div>
+	}
+}

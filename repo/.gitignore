@@ -1,0 +1,51 @@
+# Binaries
+/bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Go
+/vendor/
+*.test
+*.out
+go.work
+go.work.sum
+
+# Environment (no env files are used in this project's workflow,
+# but prevent accidental commits of any that appear locally)
+.env
+.env.*
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+/tmp/
+/dist/
+
+# Generated templ files
+*_templ.go
+
+# Backup artifacts
+/backups/
+
+# Export artifacts
+/exports/
+
+# Upload artifacts
+/uploads/
+
+# E2E test artifacts (screenshots are kept for review)
+e2e/node_modules/
+e2e/test-results/
+e2e/playwright-report/

@@ -1,0 +1,80 @@
+package pages
+
+import (
+	"fmt"
+	"github.com/campusrec/campusrec/internal/model"
+	"github.com/campusrec/campusrec/web/templates/components"
+	"github.com/campusrec/campusrec/web/templates/layout"
+)
+
+func hasShippableItem(items []model.CartItem) bool {
+	for _, item := range items {
+		if item.ItemType == "product" {
+			return true
+		}
+	}
+	return false
+}
+
+templ CheckoutPage(pctx components.PageContext, items []model.CartItem, addresses []model.DeliveryAddress, errMsg string) {
+	@layout.Base(pctx, "Checkout") {
+		<div class="form-container">
+			<h1>Checkout</h1>
+			if errMsg != "" {
+				<div class="alert alert-error">{ errMsg }</div>
+			}
+			if len(items) == 0 {
+				<p class="empty-state">Your cart is empty. <a href="/catalog">Browse the catalog</a> to add items.</p>
+			} else {
+				<h3>Order Summary</h3>
+				<table class="data-table">
+					<thead>
+						<tr><th>Item</th><th>Qty</th><th>Price</th><th>Total</th></tr>
+					</thead>
+					<tbody>
+						for _, item := range items {
+							<tr>
+								<td class="monospace">{ item.ItemID.String()[:8] }... ({ item.ItemType })</td>
+								<td>{ fmt.Sprint(item.Quantity) }</td>
+								<td>{ formatPrice(item.PriceSnapshot, item.Currency) }</td>
+								<td>{ formatPrice(item.PriceSnapshot * int64(item.Quantity), item.Currency) }</td>
+							</tr>
+						}
+					</tbody>
+					<tfoot>
+						<tr>
+							<td colspan="3" style="text-align:right"><strong>Total:</strong></td>
+							<td><strong>{ formatPrice(cartTotal(items), cartCurrency(items)) }</strong></td>
+						</tr>
+					</tfoot>
+				</table>
+				<form method="POST" action="/my/checkout" class="form" style="margin-top:1.5rem">
+					if hasShippableItem(items) {
+						<div class="form-group">
+							<label for="address_id">Delivery Address</label>
+							if len(addresses) == 0 {
+								<p class="help-text">
+									You need a delivery address for shippable items.
+									<a href="/my/addresses/new">Add one</a>.
+								</p>
+							} else {
+								<select name="address_id" id="address_id">
+									<option value="">-- Select address --</option>
+									for _, addr := range addresses {
+										<option value={ addr.ID.String() }>
+											{ addr.RecipientName } - { addr.Line1 }, { addr.City }
+											if addr.IsDefault {
+												(Default)
+											}
+										</option>
+									}
+								</select>
+							}
+						</div>
+					}
+					<button type="submit" class="btn btn-primary btn-full">Place Order</button>
+				</form>
+			}
+		</div>
+	}
+}

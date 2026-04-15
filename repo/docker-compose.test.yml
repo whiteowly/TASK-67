@@ -1,0 +1,27 @@
+services:
+  test-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: campusrec_test
+      POSTGRES_PASSWORD: campusrec_test
+      POSTGRES_DB: campusrec_test
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U campusrec_test"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
+
+  test-runner:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    environment:
+      DATABASE_URL: postgres://campusrec_test:campusrec_test@test-db:5432/campusrec_test?sslmode=disable
+      SESSION_SECRET: test-secret-at-least-32-characters-long-for-tests
+      GIN_MODE: test
+      FACILITY_TIMEZONE: Asia/Shanghai
+      FACILITY_NAME: CampusRec Test
+    depends_on:
+      test-db:
+        condition: service_healthy
+    command: ["go", "test", "./...", "-v", "-count=1", "-p=1"]

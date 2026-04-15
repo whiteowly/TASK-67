@@ -1,0 +1,26 @@
+package admin
+
+import (
+	"github.com/campusrec/campusrec/web/templates/components"
+	"github.com/campusrec/campusrec/web/templates/layout"
+)
+
+templ Dashboard(pctx components.PageContext) {
+	@layout.Base(pctx, "Admin Dashboard") {
+		<h1>Administration</h1>
+		<div class="admin-nav">
+			<a href="/admin/config" class="admin-card">
+				<h3>Configuration</h3>
+				<p>Manage system settings and policies</p>
+			</a>
+			<a href="/admin/feature-flags" class="admin-card">
+				<h3>Feature Flags</h3>
+				<p>Manage canary releases and feature toggles</p>
+			</a>
+			<a href="/admin/audit-logs" class="admin-card">
+				<h3>Audit Logs</h3>
+				<p>View system activity and security events</p>
+			</a>
+		</div>
+	}
+}

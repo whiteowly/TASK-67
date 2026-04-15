@@ -1,0 +1,50 @@
+package layout
+
+import "github.com/campusrec/campusrec/web/templates/components"
+
+templ Base(pctx components.PageContext, title string) {
+	<!DOCTYPE html>
+	<html lang="en">
+	<head>
+		<meta charset="UTF-8"/>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+		<title>{ title } - { pctx.FacilityName }</title>
+		<link rel="stylesheet" href="/static/css/main.css"/>
+	</head>
+	<body>
+		<nav class="navbar">
+			<div class="nav-container">
+				<a href="/" class="nav-brand">{ pctx.FacilityName }</a>
+				<div class="nav-links">
+					<a href="/catalog">Catalog</a>
+					if pctx.IsLoggedIn() {
+						<a href="/my/cart">Cart</a>
+						<a href="/my/orders">Orders</a>
+						<a href="/my/registrations">Registrations</a>
+						<a href="/my/addresses">Addresses</a>
+						if pctx.IsAdmin() {
+							<a href="/admin">Admin</a>
+						}
+						<span class="nav-user">{ pctx.User.DisplayName }</span>
+						<form method="POST" action="/logout" class="inline-form">
+							<button type="submit" class="btn-link">Logout</button>
+						</form>
+					} else {
+						<a href="/login">Login</a>
+						<a href="/register">Register</a>
+					}
+				</div>
+			</div>
+		</nav>
+		<main class="container">
+			{ children... }
+		</main>
+		<footer class="footer">
+			<div class="container">
+				<p>{ pctx.FacilityName } - CampusRec Platform</p>
+			</div>
+		</footer>
+		<script src="/static/js/main.js"></script>
+	</body>
+	</html>
+}

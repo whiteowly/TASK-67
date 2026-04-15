@@ -1,0 +1,57 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: campusrec
+      POSTGRES_PASSWORD: campusrec
+      POSTGRES_DB: campusrec
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U campusrec"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: postgres://campusrec:campusrec@db:5432/campusrec?sslmode=disable
+      SESSION_SECRET: e2e-test-secret-at-least-32-characters-long
+      GIN_MODE: release
+      SERVER_HOST: 0.0.0.0
+      SERVER_PORT: "8080"
+      FACILITY_TIMEZONE: Asia/Shanghai
+      FACILITY_NAME: CampusRec Center
+    depends_on:
+      db:
+        condition: service_healthy
+    command: >
+      sh -c "
+        for i in 1 2 3 4 5; do
+          /app/campusrec -migrate up && break || sleep 2;
+        done &&
+        /app/campusrec -seed &&
+        /app/campusrec
+      "
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO /dev/null http://localhost:8080/health || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  e2e:
+    build:
+      context: ./e2e
+      dockerfile: Dockerfile
+    network_mode: "service:app"
+    environment:
+      # Use localhost since we share the app's network namespace
+      BASE_URL: http://localhost:8080
+    depends_on:
+      app:
+        condition: service_healthy
+    volumes:
+      - ./e2e/screenshots:/e2e/screenshots
+      - ./e2e/test-results:/e2e/test-results

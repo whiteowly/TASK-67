@@ -1,0 +1,130 @@
+package pages
+
+import (
+	"fmt"
+	"github.com/campusrec/campusrec/internal/model"
+	"github.com/campusrec/campusrec/web/templates/components"
+	"github.com/campusrec/campusrec/web/templates/layout"
+)
+
+templ PostList(pctx components.PageContext, posts []model.Post) {
+	@layout.Base(pctx, "Community") {
+		<div class="page-header">
+			<h1>Community Posts</h1>
+			if pctx.IsLoggedIn() {
+				<a href="/posts/new" class="btn btn-primary">New Post</a>
+			}
+		</div>
+		if len(posts) == 0 {
+			<p class="empty-state">No posts yet.</p>
+		} else {
+			<div class="card-grid">
+				for _, p := range posts {
+					<div class="card">
+						<div class="card-header">
+							if p.Title != nil {
+								<h3>{ *p.Title }</h3>
+							} else {
+								<h3>Post</h3>
+							}
+						</div>
+						<p class="card-desc">{ truncate(p.Body, 200) }</p>
+						<div class="card-meta">
+							<span>{ p.CreatedAt.Format("Jan 02, 2006 15:04") }</span>
+						</div>
+					</div>
+				}
+			</div>
+		}
+	}
+}
+
+func truncate(s string, n int) string {
+	if len(s) <= n {
+		return s
+	}
+	return s[:n] + "..."
+}
+
+templ PostNew(pctx components.PageContext, errMsg string) {
+	@layout.Base(pctx, "New Post") {
+		<div class="form-container">
+			<h2>New Post</h2>
+			if errMsg != "" {
+				<div class="alert alert-error">{ errMsg }</div>
+			}
+			<form method="POST" action="/posts" class="form">
+				<div class="form-group">
+					<label for="title">Title (optional)</label>
+					<input type="text" id="title" name="title" maxlength="256"/>
+				</div>
+				<div class="form-group">
+					<label for="body">Body *</label>
+					<textarea id="body" name="body" rows="6" maxlength="5000" required></textarea>
+					<small>Max 5,000 characters</small>
+				</div>
+				<button type="submit" class="btn btn-primary">Publish</button>
+				<a href="/posts" class="btn btn-secondary">Cancel</a>
+			</form>
+		</div>
+	}
+}
+
+templ StaffShipments(pctx components.PageContext, shipments []model.Shipment) {
+	@layout.Base(pctx, "Shipments") {
+		<h1>Shipment Management</h1>
+		if len(shipments) == 0 {
+			<p class="empty-state">No shipments.</p>
+		} else {
+			<table class="data-table">
+				<thead><tr><th>ID</th><th>Order</th><th>Status</th><th>Tracking</th><th>Actions</th></tr></thead>
+				<tbody>
+					for _, s := range shipments {
+						<tr>
+							<td class="monospace">{ s.ID.String()[:8] }</td>
+							<td class="monospace">{ s.OrderID.String()[:8] }</td>
+							<td><span class="badge">{ s.Status }</span></td>
+							<td>
+								if s.TrackingNumber != nil {
+									{ *s.TrackingNumber }
+								}
+							</td>
+							<td>
+								<a href={ templ.SafeURL(fmt.Sprintf("/staff/shipments/%s", s.ID)) } class="btn btn-sm">View</a>
+							</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		}
+	}
+}
+
+templ StaffTickets(pctx components.PageContext, tickets []model.Ticket) {
+	@layout.Base(pctx, "Tickets") {
+		<h1>Exception Tickets</h1>
+		if len(tickets) == 0 {
+			<p class="empty-state">No tickets.</p>
+		} else {
+			<table class="data-table">
+				<thead><tr><th>#</th><th>Type</th><th>Title</th><th>Priority</th><th>Status</th><th>SLA</th></tr></thead>
+				<tbody>
+					for _, t := range tickets {
+						<tr>
+							<td>{ t.TicketNumber }</td>
+							<td>{ t.TicketType }</td>
+							<td>{ t.Title }</td>
+							<td><span class="badge">{ t.Priority }</span></td>
+							<td><span class="badge">{ t.Status }</span></td>
+							<td>
+								if t.SLAResponseDue != nil {
+									{ t.SLAResponseDue.Format("Jan 02 15:04") }
+								}
+							</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		}
+	}
+}

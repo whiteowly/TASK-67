@@ -1,0 +1,44 @@
+package pages
+
+import (
+	"github.com/campusrec/campusrec/web/templates/components"
+	"github.com/campusrec/campusrec/web/templates/layout"
+)
+
+templ Register(pctx components.PageContext, errMsg string, username string) {
+	@layout.Base(pctx, "Register") {
+		<div class="auth-form-container">
+			<h2>Create Account</h2>
+			if errMsg != "" {
+				<div class="alert alert-error">{ errMsg }</div>
+			}
+			<form method="POST" action="/register" class="form">
+				<div class="form-group">
+					<label for="username">Username</label>
+					<input type="text" id="username" name="username" value={ username } required autofocus
+						minlength="3" maxlength="64" pattern="[a-zA-Z0-9._-]+"/>
+					<small>3-64 characters, letters, numbers, dots, underscores, hyphens</small>
+				</div>
+				<div class="form-group">
+					<label for="display_name">Display Name</label>
+					<input type="text" id="display_name" name="display_name"/>
+				</div>
+				<div class="form-group">
+					<label for="email">Email (optional)</label>
+					<input type="email" id="email" name="email"/>
+				</div>
+				<div class="form-group">
+					<label for="password">Password</label>
+					<input type="password" id="password" name="password" required minlength="12"/>
+					<small>Min 12 characters: uppercase, lowercase, digit, special character</small>
+				</div>
+				<div class="form-group">
+					<label for="confirm_password">Confirm Password</label>
+					<input type="password" id="confirm_password" name="confirm_password" required minlength="12"/>
+				</div>
+				<button type="submit" class="btn btn-primary btn-full">Create Account</button>
+			</form>
+			<p class="auth-link">Already have an account? <a href="/login">Sign In</a></p>
+		</div>
+	}
+}
