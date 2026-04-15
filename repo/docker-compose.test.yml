@@ -14,7 +14,7 @@ services:
   test-runner:
     build:
       context: .
-      dockerfile: Dockerfile.test
+      dockerfile: ${TEST_DOCKERFILE:-Dockerfile.test}
     environment:
       DATABASE_URL: postgres://campusrec_test:campusrec_test@test-db:5432/campusrec_test?sslmode=disable
       SESSION_SECRET: test-secret-at-least-32-characters-long-for-tests
