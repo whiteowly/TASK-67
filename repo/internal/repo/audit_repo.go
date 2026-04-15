@@ -74,8 +74,9 @@ func (r *AuditRepo) List(ctx context.Context, filter AuditFilter) ([]model.Audit
 		return nil, 0, fmt.Errorf("count audit logs: %w", err)
 	}
 
-	// Fetch
-	query := "SELECT id, actor_type, actor_id, action, resource, resource_id, old_state, new_state, reason_code, note, request_id, ip_addr, metadata, created_at " +
+	// Fetch — cast inet to text because pgx's default codec does not scan
+	// PostgreSQL INET directly into *string; host() yields plain text.
+	query := "SELECT id, actor_type, actor_id, action, resource, resource_id, old_state, new_state, reason_code, note, request_id, host(ip_addr) AS ip_addr, metadata, created_at " +
 		baseQuery + fmt.Sprintf(` ORDER BY created_at DESC LIMIT $%d OFFSET $%d`, argIdx, argIdx+1)
 	args = append(args, filter.Limit, filter.Offset)
 

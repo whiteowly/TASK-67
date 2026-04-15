@@ -1,215 +1,164 @@
 # CampusRec
 
-A private-network operational platform for recreation centers, wellness facilities, and training studios. Manages session registration, seat utilization, attendance, commerce, moderation, and administration.
+A fullstack private-network operational platform for recreation centers, wellness facilities, and training studios. 
 
-## Tech Stack
+## Architecture & Tech Stack
 
-- **Backend**: Go + Gin
-- **Frontend**: Templ-rendered English UI
-- **Database**: PostgreSQL 16
-- **Auth**: Local username/password with server-side sessions
-- **Authorization**: RBAC (Member, Staff, Moderator, Administrator)
-
-## Quick Start
-
-Run the entire application with one command:
-
-```bash
-docker compose up --build
-```
-
-The app will be available at **http://127.0.0.1:8080**.
-
-This automatically starts PostgreSQL, runs migrations, seeds sample data, and starts the server. No manual env files, exports, or pre-steps required.
-
-### Default Seed Users
-
-| Username | Password | Role |
-|----------|----------|------|
-| admin | Seed@Pass1234 | Administrator |
-| staff1 | Seed@Pass1234 | Staff |
-| mod1 | Seed@Pass1234 | Moderator |
-| member1 | Seed@Pass1234 | Member |
-| member2 | Seed@Pass1234 | Member |
-
-## Running Tests
-
-### Go unit + integration tests
-
-```bash
-./run_tests.sh
-```
-
-Starts a test database in Docker, runs all Go unit and integration tests, cleans up, and reports pass/fail.
-
-### Browser E2E tests (Playwright)
-
-```bash
-./run_e2e.sh
-```
-
-Starts the full app stack in Docker, runs Playwright browser tests against real UI pages, produces screenshots in `e2e/screenshots/`.
-
-### Database Init
-
-```bash
-./init_db.sh
-```
-
-Explicit, idempotent database bootstrap. Runs migrations and seeds data. Uses the Compose database if running, or a `DATABASE_URL` you provide.
-
-## API Endpoints
-
-### Public
-- `GET /health` - Health check
-- `POST /api/v1/auth/register` - Register new account
-- `POST /api/v1/auth/login` - Login
-- `GET /api/v1/catalog/sessions` - Browse sessions
-- `GET /api/v1/catalog/sessions/:id` - Session detail
-- `GET /api/v1/catalog/products` - Browse products
-- `GET /api/v1/catalog/products/:id` - Product detail
-- `GET /api/v1/posts` - List community posts
-
-### Authenticated (Member+)
-- `POST /api/v1/auth/logout` - Logout
-- `GET /api/v1/users/me` - Get profile
-- `PATCH /api/v1/users/me` - Update profile
-- `GET|POST /api/v1/addresses` - List / create addresses
-- `GET|PATCH|DELETE /api/v1/addresses/:id` - Address CRUD
-- `POST /api/v1/registrations` - Register for session
-- `GET /api/v1/registrations` - List own registrations
-- `GET /api/v1/registrations/:id` - Get registration detail
-- `POST /api/v1/registrations/:id/cancel` - Cancel registration
-- `POST /api/v1/registrations/:id/approve` - Approve registration (staff/admin)
-- `POST /api/v1/registrations/:id/reject` - Reject registration (staff/admin)
-- `GET /api/v1/cart` - Get cart
-- `POST /api/v1/cart/items` - Add to cart
-- `DELETE /api/v1/cart/items/:id` - Remove from cart
-- `POST /api/v1/checkout` - Checkout cart
-- `POST /api/v1/buy-now` - Buy Now (ephemeral checkout)
-- `GET /api/v1/orders` - List orders
-- `GET /api/v1/orders/:id` - Get order detail
-- `POST /api/v1/orders/:id/pay` - Create payment request
-- `POST /api/v1/posts` - Create post
-- `POST /api/v1/posts/:id/report` - Report post
-- `POST /api/v1/tickets` - Create ticket
-- `GET /api/v1/tickets` - List tickets
-- `GET /api/v1/tickets/:id` - Get ticket detail
-- `PATCH /api/v1/tickets/:id/status` - Update ticket status
-- `POST /api/v1/tickets/:id/comments` - Add ticket comment
-- `POST /api/v1/tickets/:id/resolve` - Resolve ticket
-- `POST /api/v1/tickets/:id/close` - Close ticket
-- `POST /api/v1/attendance/leave` - Start temporary leave
-- `POST /api/v1/attendance/leave/:id/return` - End temporary leave
-
-### Staff / Admin
-- `POST /api/v1/attendance/checkin` - Staff check-in
-- `GET /api/v1/attendance/exceptions` - List occupancy exceptions
-- `POST /api/v1/shipments` - Create shipment
-- `GET /api/v1/shipments` - List shipments
-- `PATCH /api/v1/shipments/:id/status` - Update shipment status
-- `POST /api/v1/shipments/:id/pod` - Record proof of delivery
-- `POST /api/v1/shipments/:id/exception` - Report shipment exception
-- `POST /api/v1/tickets/:id/assign` - Assign ticket (staff/admin)
-
-### Moderator / Admin
-- `GET /api/v1/moderation/reports` - List reports
-- `GET /api/v1/moderation/cases` - List moderation cases
-- `GET /api/v1/moderation/cases/:id` - Get case detail
-- `POST /api/v1/moderation/cases/:id/action` - Action moderation case
-- `POST /api/v1/moderation/bans` - Apply ban
-- `POST /api/v1/moderation/bans/:id/revoke` - Revoke ban
-
-### Administrator Only
-- `GET /api/v1/admin/config` - List system configuration
-- `PATCH /api/v1/admin/config/:key` - Update config key
-- `GET /api/v1/admin/feature-flags` - List feature flags
-- `PATCH /api/v1/admin/feature-flags/:key` - Update feature flag
-- `GET /api/v1/admin/audit-logs` - Audit logs
-- `GET /api/v1/admin/kpis` - KPI dashboard
-- `GET /api/v1/admin/jobs` - Job queue status
-- `POST /api/v1/admin/backups` - Run backup
-- `GET /api/v1/admin/backups` - List backups
-- `POST /api/v1/admin/restore` - Restore from backup
-- `POST /api/v1/admin/archives` - Run archive
-- `GET /api/v1/admin/archives` - List archives
-- `POST /api/v1/admin/refunds/:id/reconcile` - Reconcile refund
-- `POST /api/v1/admin/registrations/override` - Admin override registration
-- `POST /api/v1/imports` - Upload import
-- `GET /api/v1/imports` - List imports
-- `GET /api/v1/imports/:id` - Get import detail
-- `POST /api/v1/imports/:id/validate` - Validate import
-- `POST /api/v1/imports/:id/apply` - Apply import
-- `POST /api/v1/exports` - Create export
-- `GET /api/v1/exports` - List exports
-- `GET /api/v1/exports/:id/download` - Download export
-
-### Payment Callback (public, from local payment bridge)
-- `POST /api/v1/payments/callback` - Payment gateway callback
-
-### Web Pages
-- `/` - Home
-- `/login`, `/register` - Auth pages
-- `/catalog` - Catalog browse (sessions + products)
-- `/catalog/sessions/:id` - Session detail
-- `/catalog/products/:id` - Product detail
-- `/my/orders` - Order list
-- `/my/orders/:id` - Order detail with payment countdown
-- `/my/orders/:id/pay` - Create payment request
-- `/my/cart/add` - Add to cart
-- `/my/buy-now` - Buy now
-- `/my/checkout` - Checkout
-- `/my/registrations` - Registration list
-- `/my/addresses` - Address management
-- `/admin` - Admin dashboard, config, feature flags, audit logs
+* **Frontend:** Server-rendered Templ pages (Go) + vanilla CSS/JS (`web/templates`, `web/static`)
+* **Backend:** Go 1.25 + Gin (`internal/handler`, `internal/service`, `internal/router`)
+* **Database:** PostgreSQL 16 (`db/migrations`, accessed via `pgx/v5`)
+* **Auth:** Local username/password with server-side sessions; RBAC across Member / Staff / Moderator / Administrator
+* **Containerization:** Docker & Docker Compose (Required)
 
 ## Project Structure
 
-```
-cmd/server/         - Application entrypoint
-config/             - Configuration loader (env vars, sensible defaults)
-db/migrations/      - PostgreSQL migrations (17 files, all phases)
-internal/
-  handler/api/      - JSON API handlers
-  handler/web/      - Templ page handlers
-  middleware/       - Auth, RBAC, audit, recovery middleware
-  model/            - Domain models
-  repo/             - Data access layer (pgx)
-  response/         - API response envelope
-  router/           - Route wiring
-  service/          - Business logic
-  util/             - Password hashing, pagination, timezone
-  validator/        - Input validation
-web/templates/      - Templ templates
-web/static/         - CSS, JS
-tests/              - Go integration tests
-e2e/                - Playwright browser E2E tests
+```text
+.
+├── cmd/server/                    # Application entrypoint (Go binary)
+├── config/                        # Configuration loader (env vars + defaults)
+├── internal/
+│   ├── handler/api/               # JSON API handlers
+│   ├── handler/web/               # Templ page handlers
+│   ├── middleware/                # Auth, RBAC, audit, recovery
+│   ├── model/                     # Domain models
+│   ├── repo/                      # Data access (pgx)
+│   ├── response/                  # API response envelope
+│   ├── router/                    # Route wiring (canonical endpoint inventory)
+│   ├── service/                   # Business logic
+│   ├── util/                      # Password hashing, pagination, timezone
+│   └── validator/                 # Input validation
+├── web/templates/                 # Templ templates
+├── web/static/                    # CSS, JS
+├── db/migrations/                 # PostgreSQL migrations
+├── tests/
+│   ├── external_api/              # External HTTP API tests (real TCP, no mocks)
+│   ├── blackbox/                  # Black-box HTTP behavior tests
+│   ├── integration/               # In-process integration tests (informational only)
+│   └── testutil/                  # Shared test helpers
+├── e2e/                           # Playwright browser E2E tests
+├── scripts/                       # CI guard scripts (drift check, etc.)
+├── docs/                          # Coverage / testing / audit-remediation docs
+├── docker-compose.yml             # App + DB orchestration (MANDATORY)
+├── docker-compose.test.yml        # Go unit + integration test runner
+├── docker-compose.external-api.yml # External API suite runner
+├── docker-compose.e2e.yml         # Playwright E2E runner
+├── Dockerfile                     # Production image
+├── Dockerfile.test                # Test image (Go toolchain + templ)
+├── run_tests.sh                   # Standardized test execution script (MANDATORY)
+├── run_external_api_tests.sh      # External API suite
+├── run_e2e.sh                     # Browser E2E suite
+├── run_all_tests.sh               # Top-level orchestrator (primary release-gate command)
+└── README.md                      # Project documentation (MANDATORY)
 ```
 
-## Local Development (without Docker)
+> **No `.env.example` is required.** The supported run path injects every needed environment variable directly via `docker-compose.yml` (DB credentials, session secret, payment merchant key, etc.). There are no host-side env vars to set.
 
-For contributors with Go and PostgreSQL installed locally:
+## Prerequisites
+
+To ensure a consistent environment, this project is designed to run entirely within containers. You must have the following installed:
+
+* [Docker](https://docs.docker.com/get-docker/)
+* [Docker Compose](https://docs.docker.com/compose/install/)
+
+No host-side Go, Node, or PostgreSQL installation is required to run, smoke-test, or test the application.
+
+## Running the Application
+
+1. **Build and Start Containers:**
+   Use Docker Compose to build the images and spin up the entire stack.
+
+   ```bash
+   docker-compose up
+   ```
+
+   Or, equivalently, in detached mode with an explicit rebuild:
+
+   ```bash
+   docker-compose up --build -d
+   ```
+
+   Both forms launch the same stack defined in `docker-compose.yml` (`db` + `app`). On startup the app container automatically:
+   * waits for PostgreSQL to be healthy,
+   * runs all schema migrations,
+   * seeds demo users / sessions / products,
+   * starts the HTTP server on port 8080.
+
+2. **Smoke check (verify the stack is up):**
+   Three deterministic checks with exact expected outputs.
+
+   ```bash
+   # 1. Health endpoint must return 200 with {"status":"ok"}
+   curl -fsS http://localhost:8080/health
+
+   # 2. Public catalog must return at least one seeded session
+   curl -fsS http://localhost:8080/api/v1/catalog/sessions | head -c 80
+   #    expected: {"success":true,"data":[ ...
+
+   # 3. Demo admin must be able to log in
+   curl -fsS -X POST http://localhost:8080/api/v1/auth/login \
+     -H 'Content-Type: application/json' \
+     -d '{"username":"admin","password":"Seed@Pass1234"}'
+   #    expected: HTTP 200 + {"success":true, ...}
+   ```
+
+   If any of these three fail, the stack did not come up cleanly — inspect with `docker-compose logs app db`.
+
+3. **Access the App:**
+   * Frontend (Templ-rendered web UI): `http://localhost:8080/`
+   * Backend API: `http://localhost:8080/api/v1`
+   * Health endpoint: `http://localhost:8080/health`
+   * Admin dashboard (after admin login): `http://localhost:8080/admin`
+
+   The full per-route list lives in `docs/api-endpoints-inventory.md` (79 endpoints, all externally tested).
+
+4. **Stop the Application:**
+
+   ```bash
+   docker-compose down -v
+   ```
+
+## Testing
+
+All unit, integration, external-API, and E2E tests are executed via a single, standardized shell script. The script automatically handles container orchestration for the test environment (separate compose files per suite, all in Docker).
+
+Make sure the script is executable, then run it:
 
 ```bash
-# Provide required config via env vars
-export DATABASE_URL=postgres://campusrec:campusrec@localhost:5432/campusrec?sslmode=disable
-export SESSION_SECRET=local-dev-secret-at-least-32-characters
-export PAYMENT_MERCHANT_KEY=your-merchant-key-for-payment-verification
-
-# Bootstrap database
-go run ./cmd/server -migrate up
-go run ./cmd/server -seed
-
-# Run server
-go run ./cmd/server
+chmod +x run_all_tests.sh
+./run_all_tests.sh
 ```
 
-This is a secondary path. The primary workflow is `docker compose up --build`.
+`run_all_tests.sh` runs, in order, with fail-fast and a combined per-suite summary:
 
-## Implementation Status
+1. `scripts/check_api_coverage_drift.sh` — static guard that confirms the router, the inventory doc, and the after-coverage mapping all describe the same 79 endpoints.
+2. `./run_tests.sh` — Go unit + integration tests inside Docker (the standardized per-template runner — also runnable on its own).
+3. `./run_external_api_tests.sh` — external HTTP API suite against a Docker-hosted app instance (covers all 79 endpoints over real TCP, no HTTP-layer mocks).
+4. `./run_e2e.sh` — Playwright browser E2E (page flows + 4 fullstack journeys).
 
-- [x] Phase 1: Auth, RBAC, Catalog, Addresses, Config, Audit
-- [x] Phase 2: Registration, Seat Control, Waitlist, Attendance
-- [x] Phase 3: Commerce, Payment, Refunds, Logistics
-- [x] Phase 4: Moderation, Tickets, SLAs, Import/Export, KPIs
-- [x] Phase 5: Backup, Restore, Archive, Canary Release
+Each per-suite runner is also available individually for fast iteration.
+
+*Note: `run_all_tests.sh` (and every per-suite runner) outputs a standard exit code (`0` for success, non-zero for failure) to integrate smoothly with CI/CD validators.*
+
+For per-suite descriptions and the per-endpoint test mapping, see `docs/testing.md`, `docs/api-coverage-after.md`, and `docs/audit_remediation.md`.
+
+## Seeded Credentials
+
+The database is pre-seeded with the following test users on startup. Use these credentials to verify authentication and role-based access controls. **Login uses `username`, not email.**
+
+| Role | Username | Password | Notes |
+| :--- | :--- | :--- | :--- |
+| **Administrator** | `admin` | `Seed@Pass1234` | Full access — system config, feature flags, audit logs, backups, imports/exports, KPIs, refund reconciliation. |
+| **Staff** | `staff1` | `Seed@Pass1234` | Attendance check-in, shipment lifecycle, ticket assignment, registration approve/reject. |
+| **Moderator** | `mod1` | `Seed@Pass1234` | Moderation reports, cases, actions, bans. |
+| **Member** | `member1` | `Seed@Pass1234` | Standard end-user — register for sessions, cart, checkout, orders, posts, tickets. |
+| **Member** | `member2` | `Seed@Pass1234` | Second member — useful for cross-user isolation tests. |
+
+---
+
+## Optional: Contributor / non-Docker workflow
+
+The Docker stack above is the **only** supported way to run the application. A non-Docker contributor workflow exists for offline hacking and is documented separately to keep this README focused on the Docker path:
+
+* See [`docs/local_development.md`](docs/local_development.md).
+
+Do not use that path for evaluation, smoke testing, or CI — it is not part of the supported run/verify flow.

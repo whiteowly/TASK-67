@@ -34,7 +34,7 @@ func TestCartFlow(t *testing.T) {
 	}
 	json.Unmarshal(w.Body.Bytes(), &prodResp)
 	if len(prodResp.Data) == 0 {
-		t.Skip("No products to test cart")
+		t.Fatal("seed broken: no published products available for cart test")
 	}
 
 	// Add to cart

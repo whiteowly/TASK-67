@@ -447,7 +447,8 @@ func TestBB_Registration_CreateCancelReadback(t *testing.T) {
 	_, env := call(member, "GET", e.BaseURL+"/api/v1/catalog/sessions?status=published", "")
 	sessions := dlist(env)
 	if len(sessions) == 0 {
-		t.Skip("no sessions")
+		// Seed contract: published sessions are always present.
+		t.Fatal("seed broken: no published sessions")
 	}
 	sid := sessions[0]["id"].(string)
 
@@ -501,7 +502,9 @@ func TestBB_Registration_Approve(t *testing.T) {
 	_, env := call(member, "GET", e.BaseURL+"/api/v1/catalog/sessions?status=published", "")
 	sessions := dlist(env)
 	if len(sessions) < 3 {
-		t.Skip("need 3 seeded sessions (3rd requires approval)")
+		// Seed contract: three sessions are always present, the third
+		// of which (Swimming Basics) requires approval.
+		t.Fatalf("seed broken: expected >=3 sessions, got %d", len(sessions))
 	}
 	// The 3rd session (Swimming Basics) has RequiresApproval=true
 	sid := sessions[2]["id"].(string)
@@ -544,7 +547,7 @@ func TestBB_Registration_Reject(t *testing.T) {
 	_, env := call(member, "GET", e.BaseURL+"/api/v1/catalog/sessions?status=published", "")
 	sessions := dlist(env)
 	if len(sessions) < 3 {
-		t.Skip("need 3 sessions")
+		t.Fatalf("seed broken: expected >=3 sessions, got %d", len(sessions))
 	}
 	sid := sessions[2]["id"].(string)
 
@@ -749,7 +752,8 @@ func TestBB_Commerce_BuyNow(t *testing.T) {
 	_, env := call(c, "GET", e.BaseURL+"/api/v1/catalog/products?status=published", "")
 	products := dlist(env)
 	if len(products) == 0 {
-		t.Skip("no products")
+		// Seed contract: products are always present.
+		t.Fatal("seed broken: no published products")
 	}
 	pid := products[0]["id"].(string)
 

@@ -86,12 +86,22 @@ func (s *FeatureFlagService) IsEnabledForUser(ctx context.Context, flagKey strin
 
 	// Deterministic cohort assignment
 	if flag.CohortPercent < 100 {
-		hash := sha256.Sum256([]byte(fmt.Sprintf("%s:%s:%d", flagKey, userID.String(), flag.Version)))
-		bucket := binary.BigEndian.Uint32(hash[:4]) % 100
-		if int(bucket) >= flag.CohortPercent {
+		if cohortBucket(flagKey, userID, flag.Version) >= flag.CohortPercent {
 			return false, nil
 		}
 	}
 
 	return true, nil
+}
+
+// cohortBucket computes the deterministic cohort bucket [0, 100) for a
+// given (flagKey, userID, version) triple. The same triple always returns
+// the same bucket, so users have stable rollout membership; bumping the
+// flag version reshuffles assignments across the user base. The bucket is
+// the first 4 bytes of SHA-256({flagKey}:{userID}:{version}) modulo 100.
+//
+// Extracted so it can be unit-tested independently of the repo dependency.
+func cohortBucket(flagKey string, userID uuid.UUID, version int) int {
+	hash := sha256.Sum256([]byte(fmt.Sprintf("%s:%s:%d", flagKey, userID.String(), version)))
+	return int(binary.BigEndian.Uint32(hash[:4]) % 100)
 }

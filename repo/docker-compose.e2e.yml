@@ -23,6 +23,7 @@ services:
       SERVER_PORT: "8080"
       FACILITY_TIMEZONE: Asia/Shanghai
       FACILITY_NAME: CampusRec Center
+      PAYMENT_MERCHANT_KEY: test-merchant-key-for-testing-only
     depends_on:
       db:
         condition: service_healthy

@@ -24,4 +24,12 @@ services:
     depends_on:
       test-db:
         condition: service_healthy
-    command: ["go", "test", "./...", "-v", "-count=1", "-p=1"]
+    # tests/external_api/ is intentionally excluded here — it has its own
+    # CI runner (./run_external_api_tests.sh + docker-compose.external-api.yml)
+    # that targets a Docker-hosted app via EXTERNAL_API_BASE_URL. Running
+    # it again here against an in-process httptest.Server would be redundant
+    # and can pollute shared DB state with the integration suite.
+    command:
+      - "sh"
+      - "-c"
+      - "go test -v -count=1 -p=1 $(go list ./... | grep -v '/tests/external_api')"

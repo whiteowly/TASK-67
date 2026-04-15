@@ -25,7 +25,7 @@ func TestOrderOwnershipIsolation(t *testing.T) {
 	var prodResp struct{ Data []struct{ ID string `json:"id"` } `json:"data"` }
 	json.Unmarshal(w.Body.Bytes(), &prodResp)
 	if len(prodResp.Data) == 0 {
-		t.Skip("no products")
+		t.Fatal("seed broken: no published products")
 	}
 	pid := prodResp.Data[0].ID
 
@@ -43,7 +43,8 @@ func TestOrderOwnershipIsolation(t *testing.T) {
 		fmt.Sprintf(`{"address_id":"%s","idempotency_key":"oa-test-1"}`, addrID), m1))
 	orderID := extractID(t, w.Body.Bytes())
 	if orderID == "" {
-		t.Skip("checkout did not produce an order")
+		t.Fatalf("checkout fixture failed: no order id; status=%d body=%s",
+			w.Code, truncBody(w.Body.String()))
 	}
 
 	// Owner access → 200
@@ -84,7 +85,7 @@ func TestRegistrationOwnershipIsolation(t *testing.T) {
 	var sessResp struct{ Data []struct{ ID string `json:"id"` } `json:"data"` }
 	json.Unmarshal(w.Body.Bytes(), &sessResp)
 	if len(sessResp.Data) == 0 {
-		t.Skip("no sessions")
+		t.Fatal("seed broken: no published sessions")
 	}
 
 	w = httptest.NewRecorder()
@@ -92,7 +93,8 @@ func TestRegistrationOwnershipIsolation(t *testing.T) {
 		fmt.Sprintf(`{"session_id":"%s"}`, sessResp.Data[0].ID), m1))
 	regID := extractID(t, w.Body.Bytes())
 	if regID == "" {
-		t.Skip("no registration created")
+		t.Fatalf("registration fixture failed: status=%d body=%s",
+			w.Code, truncBody(w.Body.String()))
 	}
 
 	// Owner → 200
@@ -125,7 +127,8 @@ func TestTicketAuthorizationReturns403(t *testing.T) {
 		staff))
 	tid := extractID(t, w.Body.Bytes())
 	if tid == "" {
-		t.Skip("ticket not created")
+		t.Fatalf("ticket fixture failed: status=%d body=%s",
+			w.Code, truncBody(w.Body.String()))
 	}
 
 	// staff (creator) can see it → 200
@@ -191,7 +194,7 @@ func TestTicketListScopedByRole(t *testing.T) {
 	memberTicketID := extractID(t, w.Body.Bytes())
 
 	if staffTicketID == "" || memberTicketID == "" {
-		t.Skip("tickets not created")
+		t.Fatalf("ticket fixtures failed: staff=%q member=%q", staffTicketID, memberTicketID)
 	}
 
 	// Staff lists tickets → should see both (staff sees all)
@@ -246,7 +249,7 @@ func TestCheckoutIdempotency(t *testing.T) {
 	var prodResp struct{ Data []struct{ ID string `json:"id"` } `json:"data"` }
 	json.Unmarshal(w.Body.Bytes(), &prodResp)
 	if len(prodResp.Data) == 0 {
-		t.Skip("no products")
+		t.Fatal("seed broken: no published products")
 	}
 	pid := prodResp.Data[0].ID
 
@@ -317,7 +320,7 @@ func TestWaitlistWhenSessionFull(t *testing.T) {
 		}
 	}
 	if sessID == "" {
-		t.Skip("no waitlist-allowed sessions")
+		t.Fatal("seed broken: no waitlist-allowed sessions present (expected at least one)")
 	}
 
 	regUser := loginAsNewUser(t, r, "waitlistuser")

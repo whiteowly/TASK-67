@@ -28,7 +28,7 @@ func TestRegistrationFlow(t *testing.T) {
 	}
 	json.Unmarshal(w.Body.Bytes(), &sessResp)
 	if len(sessResp.Data) == 0 {
-		t.Skip("No published sessions to test registration")
+		t.Fatal("seed broken: no published sessions available for registration test")
 	}
 
 	sessionID := sessResp.Data[0].ID

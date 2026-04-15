@@ -59,7 +59,7 @@ func TestCheckinRejectsOutsideWindow(t *testing.T) {
 	var sess struct{ Data []struct{ ID string `json:"id"` } `json:"data"` }
 	json.Unmarshal(w.Body.Bytes(), &sess)
 	if len(sess.Data) == 0 {
-		t.Skip("no sessions")
+		t.Fatal("seed broken: no published sessions")
 	}
 
 	w = httptest.NewRecorder()
@@ -67,7 +67,7 @@ func TestCheckinRejectsOutsideWindow(t *testing.T) {
 		fmt.Sprintf(`{"session_id":"%s"}`, sess.Data[0].ID), member))
 	rid := extractID(t, w.Body.Bytes())
 	if rid == "" {
-		t.Skip("no reg")
+		t.Fatalf("registration fixture failed: status=%d body=%s", w.Code, w.Body.String())
 	}
 
 	// Check-in should fail — session is 48h away, outside any lead window

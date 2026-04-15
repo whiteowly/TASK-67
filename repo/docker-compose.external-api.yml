@@ -1,0 +1,83 @@
+# docker-compose.external-api.yml
+#
+# Orchestrates a real app + DB and runs the external_api + blackbox suites
+# against the live HTTP server via TCP. No in-process server, no mocks.
+#
+# Usage:
+#   ./run_external_api_tests.sh
+#
+# Flow:
+#   1. `db` starts Postgres 16 (healthcheck-gated).
+#   2. `app` builds from Dockerfile, runs migrations + seed, starts the
+#      HTTP server on port 8080 in its network namespace. Has its own
+#      healthcheck against /health.
+#   3. `tests` waits for `app` to be healthy, then runs
+#      `go test ./tests/external_api/... ./tests/blackbox/...`
+#      against `http://app:8080` via `EXTERNAL_API_BASE_URL`.
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: campusrec
+      POSTGRES_PASSWORD: campusrec
+      POSTGRES_DB: campusrec
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U campusrec"]
+      interval: 2s
+      timeout: 5s
+      retries: 15
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: postgres://campusrec:campusrec@db:5432/campusrec?sslmode=disable
+      SESSION_SECRET: ext-api-test-secret-at-least-32-characters-long
+      GIN_MODE: release
+      SERVER_HOST: 0.0.0.0
+      SERVER_PORT: "8080"
+      FACILITY_TIMEZONE: Asia/Shanghai
+      FACILITY_NAME: CampusRec External-API Test
+      PAYMENT_MERCHANT_KEY: test-merchant-key-for-testing-only
+    depends_on:
+      db:
+        condition: service_healthy
+    command: >
+      sh -c "
+        for i in 1 2 3 4 5; do
+          /app/campusrec -migrate up && break || sleep 2;
+        done &&
+        /app/campusrec -seed &&
+        /app/campusrec
+      "
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO /dev/null http://localhost:8080/health || exit 1"]
+      interval: 3s
+      timeout: 5s
+      retries: 30
+      start_period: 15s
+
+  tests:
+    build:
+      context: .
+      dockerfile: ${TEST_DOCKERFILE:-Dockerfile.test}
+    environment:
+      # Target the live Docker-hosted app over real HTTP.
+      EXTERNAL_API_BASE_URL: http://app:8080
+      # DATABASE_URL is only read by testutil setup as a fallback; the external
+      # suite does NOT build its own router — it hits the running app above.
+    depends_on:
+      app:
+        condition: service_healthy
+    # Runs the external_api suite (which covers all 79 endpoints end-to-end
+     # via EXTERNAL_API_BASE_URL). The tests/blackbox/ suite is not targeted
+     # here because it deliberately boots its own httptest.Server for fast
+     # local iteration; it is exercised by ./run_tests.sh.
+    command:
+      - "go"
+      - "test"
+      - "./tests/external_api/..."
+      - "-v"
+      - "-count=1"
+      - "-p=1"
